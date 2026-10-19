@@ -28,15 +28,15 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
 
-          # ساخت پروژه پایه فلاتر
-          flutter create my_app --platforms=android --project-name zabanamoz_app
+          # ساخت پروژه با مشخصات نیتیو اندروید
+          flutter create app_runner --platforms=android --project-name zabanamoz --org com.radan.zabanamoz
 
-          # استخراج محتویات فایل زیپ مستقیماً روی پروژه پایه
-          7z x -y zabanamoz_project.zip -omy_app
+          # استخراج فایل‌های جدید و تمیز شما روی پروژه
+          7z x -y zabanamoz_clean.zip -oapp_runner
 
-          cd my_app
+          cd app_runner
 
-          # دریافت پکیج‌ها و ساخت فایل APK
+          # دریافت پکیج‌ها و ساخت نهایی APK
           flutter pub get
           flutter build apk --release
 
