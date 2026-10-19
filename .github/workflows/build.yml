@@ -24,28 +24,24 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Extract Project Files
+      - name: Prepare Project
         run: |
-          unzip -o zabanamoz_project.zip -d extracted_project
-          if [ -d "extracted_project/zabanamoz/app" ]; then
-            cp -r extracted_project/zabanamoz/app/* .
-          elif [ -d "extracted_project/app" ]; then
-            cp -r extracted_project/app/* .
-          else
-            cp -r extracted_project/* .
+          unzip -q -o zabanamoz_project.zip
+          if [ -d "zabanamoz/app" ]; then
+            cd zabanamoz/app
+          elif [ -d "app" ]; then
+            cd app
           fi
           if [ ! -d "android" ]; then
             flutter create . --platforms=android
           fi
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build APK
-        run: flutter build apk --release
+          flutter pub get
+          flutter build apk --release
+          mkdir -p $GITHUB_WORKSPACE/output
+          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: output/app-release.apk
