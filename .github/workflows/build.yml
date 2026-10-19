@@ -28,43 +28,52 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
           
-          # ساخت یک پروژه خام فلاتر
+          # ساخت پروژه پایه اندروید
           flutter create app_project --platforms=android --project-name zabanamoz_app
           
           # استخراج فایل زیپ شما
           7z x -y zabanamoz_project.zip -oextracted
           
-          echo "=== لیست تمام فایل‌های داخل فایل زیپ شما ==="
-          find extracted
-          echo "==========================================="
+          # پیدا کردن فایلی که واقعاً حاوی متد main() است
+          REAL_MAIN=$(grep -rnwl "extracted" -e "void main" | head -n 1)
           
-          # بررسی وجود main.dart در فایل‌های استخراج‌شده
-          MAIN_PATH=$(find extracted -name "main.dart" | head -n 1)
-          
-          if [ -n "$MAIN_PATH" ]; then
-            echo "فایل اصلی پیدا شد: $MAIN_PATH"
-            SRC_DIR=$(dirname "$MAIN_PATH")
-            rm -rf app_project/lib/*
-            cp -r "$SRC_DIR"/* app_project/lib/
-          else
-            echo "فایل main.dart با این نام وجود ندارد، جستجوی اولین فایل با پسوند dart..."
-            FIRST_DART=$(find extracted -name "*.dart" | head -n 1)
-            if [ -n "$FIRST_DART" ]; then
-              echo "فایل پیدا شد و به عنوان main.dart تعیین می‌شود: $FIRST_DART"
-              SRC_DIR=$(dirname "$FIRST_DART")
-              rm -rf app_project/lib/*
-              cp -r "$SRC_DIR"/* app_project/lib/
-              cp "$FIRST_DART" app_project/lib/main.dart
-            fi
+          if [ -z "$REAL_MAIN" ]; then
+            REAL_MAIN=$(grep -rnwl "extracted" -e "main()" | head -n 1)
           fi
           
-          # کپی فایل تنظیمات پکیج در صورت وجود
-          PUBSPEC=$(find extracted -name "pubspec.yaml" | head -n 1)
-          if [ -n "$PUBSPEC" ]; then
-            cp "$PUBSPEC" app_project/pubspec.yaml
+          echo "فایل اصلی برنامه پیدا شد در: $REAL_MAIN"
+          
+          # پاکسازی و انتقال کدهای شما به پوشه lib پروژه
+          rm -rf app_project/lib/*
+          
+          # انتقال تمام فایل‌ها و زیرپوشه‌ها
+          if [ -d "extracted/lib" ]; then
+            cp -r extracted/lib/* app_project/lib/
+          else
+            cp -r extracted/* app_project/lib/
+          fi
+          
+          # اطمینان از اینکه فایل دارای تابع main به عنوان main.dart اصلی قرار گیرد
+          if [ -n "$REAL_MAIN" ]; then
+            cp "$REAL_MAIN" app_project/lib/main.dart
           fi
           
           cd app_project
+          
+          # نصب مستقیم پکیج Supabase و پکیج‌های پایه مورد نیاز
+          flutter pub add supabase_flutter
+          
+          # اگر فایل pubspec در زیپ بود کتابخانه‌های تعریف شده آن نیز خوانده شوند
+          PUBSPEC=$(find ../extracted -name "pubspec.yaml" | head -n 1)
+          if [ -n "$PUBSPEC" ]; then
+            # استخراج نام کتابخانه‌های اضافه شده و نصب خودکار آن‌ها
+            awk '/dependencies:/{flag=1; next} /dev_dependencies:/{flag=0} flag' "$PUBSPEC" | grep -E '^  [a-zA-Z0-9_]+:' | awk -F: '{print $1}' | tr -d ' ' | while read -r pkg; do
+              if [ "$pkg" != "flutter" ] && [ "$pkg" != "cupertino_icons" ]; then
+                flutter pub add "$pkg" || true
+              fi
+            done
+          fi
+          
           flutter pub get
           flutter build apk --release
           
