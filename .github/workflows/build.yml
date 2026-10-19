@@ -27,21 +27,35 @@ jobs:
       - name: Prepare and Build Project
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
-          7z x -y zabanamoz_project.zip -oextracted_project
-          SRC=$(find extracted_project -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
-          echo "Source found at: $SRC"
-          cd "$SRC"
           
-          # استخراج نام پکیج از pubspec.yaml به شکل خودکار
-          PKG_NAME=$(grep '^name:' pubspec.yaml | head -n 1 | awk '{print $2}' | tr -d '\r\n')
-          echo "Project name is: $PKG_NAME"
+          # ساخت یک پروژه کامل و سالم اندروید
+          flutter create app_project --platforms=android --project-name zabanamoz_app
           
-          # ساخت یک پروژه موقت فقط برای گرفتن پوشه اندروید
-          flutter create /tmp/temp_flutter --platforms=android --project-name "$PKG_NAME"
-          cp -r /tmp/temp_flutter/android .
+          # پاک کردن کدهای نمونه فلاتر
+          rm -rf app_project/lib/*
           
+          # استخراج فایل‌های پروژه شما و انتقال به پروژه فلاتر
+          7z x -y zabanamoz_project.zip -oextracted
+          
+          # اگر پوشه lib در فایل زیپ بود محتوای آن کپی شود، در غیر این صورت کل فایل‌ها منتقل شوند
+          if [ -d "extracted/lib" ]; then
+            cp -r extracted/lib/* app_project/lib/
+            [ -f extracted/pubspec.yaml ] && cp extracted/pubspec.yaml app_project/
+          else
+            # جستجوی فایل main.dart
+            MAIN_FILE=$(find extracted -name "main.dart" | head -n 1)
+            if [ -n "$MAIN_FILE" ]; then
+              SRC_DIR=$(dirname "$MAIN_FILE")
+              cp -r "$SRC_DIR"/* app_project/lib/
+            else
+              cp -r extracted/* app_project/lib/
+            fi
+          fi
+          
+          cd app_project
           flutter pub get
           flutter build apk --release
+          
           mkdir -p $GITHUB_WORKSPACE/output
           cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/
 
