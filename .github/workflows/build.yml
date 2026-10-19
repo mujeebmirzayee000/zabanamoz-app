@@ -28,16 +28,25 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
 
-          # ساخت پروژه با مشخصات نیتیو اندروید
-          flutter create app_runner --platforms=android --project-name zabanamoz --org com.radan.zabanamoz
+          # ساخت پروژه تمیز فلاتر
+          flutter create zabanamoz_run --platforms=android --project-name zabanamoz --org com.radan.zabanamoz
 
-          # استخراج فایل‌های جدید و تمیز شما روی پروژه
-          7z x -y zabanamoz_clean.zip -oapp_runner
+          # استخراج محتویات زیپ در یک پوشه موقت
+          mkdir -p temp_clean
+          7z x -y zabanamoz_clean.zip -otemp_clean
 
-          cd app_runner
+          # کپی فایل اصلی برنامه روی پروژه پایه (بدون دستکاری پوشه اندروید)
+          if [ -f temp_clean/lib/main.dart ]; then
+            cp temp_clean/lib/main.dart zabanamoz_run/lib/main.dart
+          fi
 
-          # دریافت پکیج‌ها و ساخت نهایی APK
-          flutter pub get
+          cd zabanamoz_run
+
+          # اضافه کردن پکیج‌های رسمی مورد نیاز با دستور مستقیم (بدون خطر خطای سینتکس در pubspec)
+          flutter pub add supabase_flutter
+          flutter pub add flutter_localizations --sdk=flutter
+
+          # ساخت مستقیم APK
           flutter build apk --release
 
           mkdir -p $GITHUB_WORKSPACE/output
