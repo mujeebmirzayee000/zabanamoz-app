@@ -28,25 +28,22 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
           
-          # استخراج فایل‌های فشرده پروژه
-          7z x -y zabanamoz_project.zip -oextracted
+          # ساخت یک پروژه کامل با پوشه اندروید نیتیو
+          flutter create zabanamoz_app --platforms=android --project-name zabanamoz_app
           
-          # پیدا کردن مسیر دقیق پروژه اصلی که pubspec.yaml در آن است
-          APP_DIR=$(find extracted -type f -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
-          echo "App directory is: $APP_DIR"
+          # استخراج در یک پوشه موقت
+          mkdir -p extracted_files
+          7z x -y zabanamoz_project.zip -oextracted_files
           
-          # ساخت یک پروژه موقت فقط برای استخراج پوشه اندروید
-          flutter create temp_android_holder --platforms=android --project-name zabanamoz_app
+          # پیدا کردن محل فایل pubspec.yaml اصلی شما در فایل زیپ
+          SOURCE_DIR=$(find extracted_files -type f -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
           
-          # اگر پوشه اندروید در پروژه اصلی نبود، آن را اضافه می‌کنیم
-          if [ ! -d "$APP_DIR/android" ]; then
-            cp -r temp_android_holder/android "$APP_DIR/"
-          fi
+          # انتقال تمام کدهای پروژه شما روی پروژه جدید (حفظ پوشه اندروید و جایگزینی فایل‌های اصلی)
+          cp -rf "$SOURCE_DIR"/* zabanamoz_app/
           
-          # ورود به پوشه برنامه اصلی
-          cd "$APP_DIR"
+          cd zabanamoz_app
           
-          # دریافت پکیج‌ها و خروجی گرفتن نهایی
+          # دریافت پکیج‌ها و ساخت نهایی APK
           flutter pub get
           flutter build apk --release
           
