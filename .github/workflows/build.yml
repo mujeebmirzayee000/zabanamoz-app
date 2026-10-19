@@ -26,12 +26,11 @@ jobs:
 
       - name: Prepare Project
         run: |
-          unzip -q -o zabanamoz_project.zip
-          if [ -d "zabanamoz/app" ]; then
-            cd zabanamoz/app
-          elif [ -d "app" ]; then
-            cd app
-          fi
+          sudo apt-get update && sudo apt-get install -y p7zip-full
+          7z x -y zabanamoz_project.zip
+          TARGET_DIR=$(find . -maxdepth 4 -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
+          echo "Found project at: $TARGET_DIR"
+          cd "$TARGET_DIR"
           if [ ! -d "android" ]; then
             flutter create . --platforms=android
           fi
