@@ -28,28 +28,40 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
           
-          # ساخت یک پروژه کامل و سالم اندروید
+          # ساخت یک پروژه خام فلاتر
           flutter create app_project --platforms=android --project-name zabanamoz_app
           
-          # پاک کردن کدهای نمونه فلاتر
-          rm -rf app_project/lib/*
-          
-          # استخراج فایل‌های پروژه شما و انتقال به پروژه فلاتر
+          # استخراج فایل زیپ شما
           7z x -y zabanamoz_project.zip -oextracted
           
-          # اگر پوشه lib در فایل زیپ بود محتوای آن کپی شود، در غیر این صورت کل فایل‌ها منتقل شوند
-          if [ -d "extracted/lib" ]; then
-            cp -r extracted/lib/* app_project/lib/
-            [ -f extracted/pubspec.yaml ] && cp extracted/pubspec.yaml app_project/
+          echo "=== لیست تمام فایل‌های داخل فایل زیپ شما ==="
+          find extracted
+          echo "==========================================="
+          
+          # بررسی وجود main.dart در فایل‌های استخراج‌شده
+          MAIN_PATH=$(find extracted -name "main.dart" | head -n 1)
+          
+          if [ -n "$MAIN_PATH" ]; then
+            echo "فایل اصلی پیدا شد: $MAIN_PATH"
+            SRC_DIR=$(dirname "$MAIN_PATH")
+            rm -rf app_project/lib/*
+            cp -r "$SRC_DIR"/* app_project/lib/
           else
-            # جستجوی فایل main.dart
-            MAIN_FILE=$(find extracted -name "main.dart" | head -n 1)
-            if [ -n "$MAIN_FILE" ]; then
-              SRC_DIR=$(dirname "$MAIN_FILE")
+            echo "فایل main.dart با این نام وجود ندارد، جستجوی اولین فایل با پسوند dart..."
+            FIRST_DART=$(find extracted -name "*.dart" | head -n 1)
+            if [ -n "$FIRST_DART" ]; then
+              echo "فایل پیدا شد و به عنوان main.dart تعیین می‌شود: $FIRST_DART"
+              SRC_DIR=$(dirname "$FIRST_DART")
+              rm -rf app_project/lib/*
               cp -r "$SRC_DIR"/* app_project/lib/
-            else
-              cp -r extracted/* app_project/lib/
+              cp "$FIRST_DART" app_project/lib/main.dart
             fi
+          fi
+          
+          # کپی فایل تنظیمات پکیج در صورت وجود
+          PUBSPEC=$(find extracted -name "pubspec.yaml" | head -n 1)
+          if [ -n "$PUBSPEC" ]; then
+            cp "$PUBSPEC" app_project/pubspec.yaml
           fi
           
           cd app_project
