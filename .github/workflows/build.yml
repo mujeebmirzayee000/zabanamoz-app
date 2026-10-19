@@ -28,47 +28,37 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
           
-          # ساخت پروژه پایه اندروید
+          # ساخت پایه سالم پروژه فلاتر
           flutter create app_project --platforms=android --project-name zabanamoz_app
           
-          # استخراج فایل زیپ شما
+          # استخراج محتوای زیپ
           7z x -y zabanamoz_project.zip -oextracted
           
-          # پیدا کردن فایلی که واقعاً حاوی متد main() است
-          REAL_MAIN=$(grep -rnwl "extracted" -e "void main" | head -n 1)
-          
-          if [ -z "$REAL_MAIN" ]; then
-            REAL_MAIN=$(grep -rnwl "extracted" -e "main()" | head -n 1)
-          fi
-          
-          echo "فایل اصلی برنامه پیدا شد در: $REAL_MAIN"
-          
-          # پاکسازی و انتقال کدهای شما به پوشه lib پروژه
+          # انتقال هوشمند ساختار کدهای اصلی
           rm -rf app_project/lib/*
-          
-          # انتقال تمام فایل‌ها و زیرپوشه‌ها
           if [ -d "extracted/lib" ]; then
             cp -r extracted/lib/* app_project/lib/
           else
-            cp -r extracted/* app_project/lib/
-          fi
-          
-          # اطمینان از اینکه فایل دارای تابع main به عنوان main.dart اصلی قرار گیرد
-          if [ -n "$REAL_MAIN" ]; then
-            cp "$REAL_MAIN" app_project/lib/main.dart
+            # اگر پوشه lib در ریشه نبود، عمیق‌ترین پوشه حاوی main.dart پیدا شود
+            MAIN_FILE=$(find extracted -name "main.dart" | head -n 1)
+            if [ -n "$MAIN_FILE" ]; then
+              SRC_DIR=$(dirname "$MAIN_FILE")
+              cp -r "$SRC_DIR"/* app_project/lib/
+            else
+              cp -r extracted/* app_project/lib/
+            fi
           fi
           
           cd app_project
           
-          # نصب مستقیم پکیج Supabase و پکیج‌های پایه مورد نیاز
-          flutter pub add supabase_flutter
+          # افزودن پکیج‌های پیش‌نیاز شناسایی‌شده در خطاها
+          flutter pub add provider supabase_flutter flutter_localizations --sdk=flutter intl
           
-          # اگر فایل pubspec در زیپ بود کتابخانه‌های تعریف شده آن نیز خوانده شوند
+          # در صورت وجود pubspec اختصاصی در زیپ، سایر پکیج‌ها نیز استخراج و نصب شوند
           PUBSPEC=$(find ../extracted -name "pubspec.yaml" | head -n 1)
           if [ -n "$PUBSPEC" ]; then
-            # استخراج نام کتابخانه‌های اضافه شده و نصب خودکار آن‌ها
             awk '/dependencies:/{flag=1; next} /dev_dependencies:/{flag=0} flag' "$PUBSPEC" | grep -E '^  [a-zA-Z0-9_]+:' | awk -F: '{print $1}' | tr -d ' ' | while read -r pkg; do
-              if [ "$pkg" != "flutter" ] && [ "$pkg" != "cupertino_icons" ]; then
+              if [ "$pkg" != "flutter" ] && [ "$pkg" != "cupertino_icons" ] && [ "$pkg" != "flutter_localizations" ]; then
                 flutter pub add "$pkg" || true
               fi
             done
