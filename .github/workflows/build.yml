@@ -27,27 +27,27 @@ jobs:
       - name: Prepare and Build Project
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
-          flutter create app_project --platforms=android --project-name zabanamoz_app
+          
+          # استخراج فایل‌های فشرده
           7z x -y zabanamoz_project.zip -oextracted
-          rm -rf app_project/lib/*
-
-          if [ -d "extracted/lib" ]; then
-            cp -r extracted/lib/* app_project/lib/
-          else
-            cp -r extracted/* app_project/lib/
+          
+          # پیدا کردن مسیر دقیق پوشه حاوی pubspec.yaml اصلی فلاتر
+          APP_DIR=$(find extracted -type f -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
+          echo "پوشه پروژه فلاتر پیدا شد: $APP_DIR"
+          
+          cd "$APP_DIR"
+          
+          # اگر پوشه اندروید نیتیو داخل پروژه نبود، به صورت خودکار ایجاد شود
+          if [ ! -d "android" ]; then
+            flutter create . --platforms=android
           fi
 
-          find app_project/lib -name "main.dart" -exec cp {} app_project/lib/main.dart \;
-
-          cd app_project
-
-          flutter pub add provider supabase_flutter intl cupertino_icons
-          
-          sed -i '/dependencies:/a \  flutter_localizations:\n    sdk: flutter' pubspec.yaml
-
+          # دریافت پکیج‌های تعریف‌شده در pubspec اصلی
           flutter pub get
+          
+          # کامپایل خروجی APK
           flutter build apk --release
-
+          
           mkdir -p $GITHUB_WORKSPACE/output
           cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/
 
