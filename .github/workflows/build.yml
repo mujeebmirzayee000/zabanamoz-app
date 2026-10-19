@@ -31,40 +31,26 @@ jobs:
           # ساخت پروژه پایه فلاتر
           flutter create app_project --platforms=android --project-name zabanamoz_app
           
-          # استخراج فایل‌های زیپ
+          # استخراج فایل‌های پروژه
           7z x -y zabanamoz_project.zip -oextracted
           
-          # پاکسازی فایل‌های پیش‌فرض فلاتر
+          # پاکسازی فایل‌های پیش‌فرض
           rm -rf app_project/lib/*
           
-          # کپی تمام فایل‌های استخراج شده به پوشه lib
-          cp -r extracted/* app_project/lib/
-          
-          # جستجوی فایل اصلی برنامه
-          MAIN_FILE=$(find app_project/lib -name "main.dart" | head -n 1)
-          
-          if [ -n "$MAIN_FILE" ]; then
-            echo "فایل main.dart پیدا شد: $MAIN_FILE"
-            ENTRY_TARGET="$MAIN_FILE"
+          # انتقال هوشمند ساختار پوشه‌ها با حفظ مسیرهای core و router
+          if [ -d "extracted/lib" ]; then
+            cp -r extracted/lib/* app_project/lib/
           else
-            # اگر main.dart نبود، فایلی که حاوی تابع main است را پیدا می‌کند
-            ENTRY_TARGET=$(grep -rnwl "app_project/lib" -e "void main" | head -n 1)
-            if [ -z "$ENTRY_TARGET" ]; then
-              ENTRY_TARGET=$(grep -rnwl "app_project/lib" -e "main()" | head -n 1)
+            # اگر پوشه lib در ریشه نبود، پوشه والد main.dart به عنوان lib تنظیم شود
+            MAIN_DIR=$(find extracted -name "main.dart" -exec dirname {} \; | head -n 1)
+            if [ -n "$MAIN_DIR" ]; then
+              cp -r "$MAIN_DIR"/* app_project/lib/
+            else
+              cp -r extracted/* app_project/lib/
             fi
-            echo "فایل دارای نقطه شروع پیدا شد: $ENTRY_TARGET"
           fi
           
-          # اگر همچنان پیدا نشد اولین فایل دارت را انتخاب می‌کند
-          if [ -z "$ENTRY_TARGET" ]; then
-            ENTRY_TARGET=$(find app_project/lib -name "*.dart" | head -n 1)
-            echo "اولین فایل دارت انتخاب شد: $ENTRY_TARGET"
-          fi
-          
-          # کپی فایل پیدا شده دقیقا در ریشه پوشه lib به نام main.dart
-          cp "$ENTRY_TARGET" app_project/lib/main.dart
-          
-          # تنظیم فایل وابستگی‌ها
+          # تنظیم فایل pubspec.yaml با تمام پکیج‌های پروژه
           cat << 'EOF' > app_project/pubspec.yaml
           name: zabanamoz_app
           description: "A new Flutter project."
@@ -95,7 +81,7 @@ jobs:
 
           cd app_project
           flutter pub get
-          flutter build apk --release -t lib/main.dart
+          flutter build apk --release
           
           mkdir -p $GITHUB_WORKSPACE/output
           cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/
