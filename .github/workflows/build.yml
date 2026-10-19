@@ -24,16 +24,16 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Prepare Project
+      - name: Prepare and Build Project
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
-          7z x -y zabanamoz_project.zip
-          TARGET_DIR=$(find . -maxdepth 4 -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
-          echo "Found project at: $TARGET_DIR"
-          cd "$TARGET_DIR"
-          if [ ! -d "android" ]; then
-            flutter create . --platforms=android
-          fi
+          mkdir -p extracted_src
+          7z x -y zabanamoz_project.zip -oextracted_src
+          flutter create --project-name zabanamoz_app zabanamoz_app
+          cp -r extracted_src/* zabanamoz_app/ 2>/dev/null  true
+          find extracted_src -name "lib" -type d -exec cp -r {} zabanamoz_app/ \; 2>/dev/null  true
+          find extracted_src -name "pubspec.yaml" -exec cp {} zabanamoz_app/ \; 2>/dev/null || true
+          cd zabanamoz_app
           flutter pub get
           flutter build apk --release
           mkdir -p $GITHUB_WORKSPACE/output
