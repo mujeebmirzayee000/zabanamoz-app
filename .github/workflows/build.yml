@@ -27,26 +27,19 @@ jobs:
       - name: Prepare and Build Project
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
-          
-          # ساخت یک پروژه کامل با پوشه اندروید نیتیو
-          flutter create zabanamoz_app --platforms=android --project-name zabanamoz_app
-          
-          # استخراج در یک پوشه موقت
-          mkdir -p extracted_files
-          7z x -y zabanamoz_project.zip -oextracted_files
-          
-          # پیدا کردن محل فایل pubspec.yaml اصلی شما در فایل زیپ
-          SOURCE_DIR=$(find extracted_files -type f -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
-          
-          # انتقال تمام کدهای پروژه شما روی پروژه جدید (حفظ پوشه اندروید و جایگزینی فایل‌های اصلی)
-          cp -rf "$SOURCE_DIR"/* zabanamoz_app/
-          
-          cd zabanamoz_app
-          
-          # دریافت پکیج‌ها و ساخت نهایی APK
+
+          # ساخت پروژه پایه فلاتر
+          flutter create my_app --platforms=android --project-name zabanamoz_app
+
+          # استخراج محتویات فایل زیپ مستقیماً روی پروژه پایه
+          7z x -y zabanamoz_project.zip -omy_app
+
+          cd my_app
+
+          # دریافت پکیج‌ها و ساخت فایل APK
           flutter pub get
           flutter build apk --release
-          
+
           mkdir -p $GITHUB_WORKSPACE/output
           cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/
 
