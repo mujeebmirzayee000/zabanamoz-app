@@ -27,62 +27,27 @@ jobs:
       - name: Prepare and Build Project
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
-          
-          # ساخت پروژه پایه فلاتر
           flutter create app_project --platforms=android --project-name zabanamoz_app
-          
-          # استخراج فایل‌های پروژه
           7z x -y zabanamoz_project.zip -oextracted
-          
-          # پاکسازی فایل‌های پیش‌فرض
           rm -rf app_project/lib/*
-          
-          # انتقال هوشمند ساختار پوشه‌ها با حفظ مسیرهای core و router
+
           if [ -d "extracted/lib" ]; then
             cp -r extracted/lib/* app_project/lib/
           else
-            # اگر پوشه lib در ریشه نبود، پوشه والد main.dart به عنوان lib تنظیم شود
-            MAIN_DIR=$(find extracted -name "main.dart" -exec dirname {} \; | head -n 1)
-            if [ -n "$MAIN_DIR" ]; then
-              cp -r "$MAIN_DIR"/* app_project/lib/
-            else
-              cp -r extracted/* app_project/lib/
-            fi
+            cp -r extracted/* app_project/lib/
           fi
-          
-          # تنظیم فایل pubspec.yaml با تمام پکیج‌های پروژه
-          cat << 'EOF' > app_project/pubspec.yaml
-          name: zabanamoz_app
-          description: "A new Flutter project."
-          publish_to: 'none'
-          version: 1.0.0+1
 
-          environment:
-            sdk: '>=3.0.0 <4.0.0'
-
-          dependencies:
-            flutter:
-              sdk: flutter
-            flutter_localizations:
-              sdk: flutter
-            intl: any
-            provider: any
-            supabase_flutter: any
-            cupertino_icons: ^1.0.8
-
-          dev_dependencies:
-            flutter_test:
-              sdk: flutter
-            flutter_lints: ^3.0.0
-
-          flutter:
-            uses-material-design: true
-          EOF
+          find app_project/lib -name "main.dart" -exec cp {} app_project/lib/main.dart \;
 
           cd app_project
+
+          flutter pub add provider supabase_flutter intl cupertino_icons
+          
+          sed -i '/dependencies:/a \  flutter_localizations:\n    sdk: flutter' pubspec.yaml
+
           flutter pub get
           flutter build apk --release
-          
+
           mkdir -p $GITHUB_WORKSPACE/output
           cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/output/
 
