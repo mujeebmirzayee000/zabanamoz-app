@@ -32,8 +32,13 @@ jobs:
           echo "Source found at: $SRC"
           cd "$SRC"
           
-          flutter create . --platforms=android --project-name zabanamoz_app
-          7z x -y $GITHUB_WORKSPACE/zabanamoz_project.zip -aoa
+          # استخراج نام پکیج از pubspec.yaml به شکل خودکار
+          PKG_NAME=$(grep '^name:' pubspec.yaml | head -n 1 | awk '{print $2}' | tr -d '\r\n')
+          echo "Project name is: $PKG_NAME"
+          
+          # ساخت یک پروژه موقت فقط برای گرفتن پوشه اندروید
+          flutter create /tmp/temp_flutter --platforms=android --project-name "$PKG_NAME"
+          cp -r /tmp/temp_flutter/android .
           
           flutter pub get
           flutter build apk --release
