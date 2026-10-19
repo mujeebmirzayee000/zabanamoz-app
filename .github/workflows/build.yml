@@ -27,13 +27,11 @@ jobs:
       - name: Prepare and Build Project
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
-          mkdir -p extracted_src
-          7z x -y zabanamoz_project.zip -oextracted_src
-          flutter create --project-name zabanamoz_app zabanamoz_app
-          cp -r extracted_src/* zabanamoz_app/ 2>/dev/null  true
-          find extracted_src -name "lib" -type d -exec cp -r {} zabanamoz_app/ \; 2>/dev/null  true
-          find extracted_src -name "pubspec.yaml" -exec cp {} zabanamoz_app/ \; 2>/dev/null || true
-          cd zabanamoz_app
+          7z x -y zabanamoz_project.zip
+          SRC=$(find . -name "pubspec.yaml" -not -path "./.*" -exec dirname {} \; | head -n 1)
+          echo "Moving to $SRC"
+          cd "$SRC"
+          flutter create . --platforms=android --project-name zabanamoz_app
           flutter pub get
           flutter build apk --release
           mkdir -p $GITHUB_WORKSPACE/output
