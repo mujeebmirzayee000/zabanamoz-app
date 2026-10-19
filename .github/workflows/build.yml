@@ -31,7 +31,6 @@ jobs:
           SRC=$(find . -name "pubspec.yaml" -not -path "./.*" -exec dirname {} \; | head -n 1)
           echo "Moving to $SRC"
           cd "$SRC"
-          flutter create . --platforms=android --project-name zabanamoz_app
           flutter pub get
           flutter build apk --release
           mkdir -p $GITHUB_WORKSPACE/output
