@@ -31,24 +31,22 @@ jobs:
           # استخراج فایل‌های فشرده پروژه
           7z x -y zabanamoz_project.zip -oextracted
           
-          # پیدا کردن مسیر دقیق پوشه اپلیکیشن
+          # پیدا کردن مسیر دقیق پروژه اصلی که pubspec.yaml در آن است
           APP_DIR=$(find extracted -type f -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
+          echo "App directory is: $APP_DIR"
+          
+          # ساخت یک پروژه موقت فقط برای استخراج پوشه اندروید
+          flutter create temp_android_holder --platforms=android --project-name zabanamoz_app
+          
+          # اگر پوشه اندروید در پروژه اصلی نبود، آن را اضافه می‌کنیم
+          if [ ! -d "$APP_DIR/android" ]; then
+            cp -r temp_android_holder/android "$APP_DIR/"
+          fi
+          
+          # ورود به پوشه برنامه اصلی
           cd "$APP_DIR"
           
-          # پشتیبان‌گیری از کدهای اصلی پروژه
-          mkdir -p /tmp/original_lib
-          cp -r lib/* /tmp/original_lib/
-          cp pubspec.yaml /tmp/original_pubspec.yaml
-
-          # ایجاد پوشه اندروید نیتیو
-          flutter create . --platforms=android --project-name zabanamoz_app
-          
-          # بازگرداندن فایل‌های اصلی پروژه زبان‌آموز
-          rm -rf lib/*
-          cp -r /tmp/original_lib/* lib/
-          cp /tmp/original_pubspec.yaml pubspec.yaml
-
-          # دریافت وابستگی‌های اصلی و ساخت فایل نصبی اپلیکیشن
+          # دریافت پکیج‌ها و خروجی گرفتن نهایی
           flutter pub get
           flutter build apk --release
           
