@@ -28,19 +28,27 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
           
-          # استخراج فایل‌های فشرده
+          # استخراج فایل‌های فشرده پروژه
           7z x -y zabanamoz_project.zip -oextracted
           
-          # یافتن مسیر پوشه اصلی اپلیکیشن
+          # پیدا کردن مسیر دقیق پوشه اپلیکیشن
           APP_DIR=$(find extracted -type f -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
           cd "$APP_DIR"
           
-          # ساخت پوشه اندروید با نام استاندارد دارت (استفاده از آندرلاین)
-          if [ ! -d "android" ]; then
-            flutter create . --platforms=android --project-name zabanamoz_app
-          fi
+          # پشتیبان‌گیری از کدهای اصلی پروژه
+          mkdir -p /tmp/original_lib
+          cp -r lib/* /tmp/original_lib/
+          cp pubspec.yaml /tmp/original_pubspec.yaml
 
-          # دریافت پکیج‌ها و ساخت APK
+          # ایجاد پوشه اندروید نیتیو
+          flutter create . --platforms=android --project-name zabanamoz_app
+          
+          # بازگرداندن فایل‌های اصلی پروژه زبان‌آموز
+          rm -rf lib/*
+          cp -r /tmp/original_lib/* lib/
+          cp /tmp/original_pubspec.yaml pubspec.yaml
+
+          # دریافت وابستگی‌های اصلی و ساخت فایل نصبی اپلیکیشن
           flutter pub get
           flutter build apk --release
           
