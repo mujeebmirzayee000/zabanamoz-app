@@ -28,18 +28,17 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full
           
-          # ساخت پایه سالم پروژه فلاتر
+          # ساخت پروژه پایه فلاتر
           flutter create app_project --platforms=android --project-name zabanamoz_app
           
-          # استخراج محتوای زیپ
+          # استخراج فایل‌های پروژه
           7z x -y zabanamoz_project.zip -oextracted
           
-          # انتقال هوشمند ساختار کدهای اصلی
+          # انتقال تمام کدهای دارت به پوشه lib
           rm -rf app_project/lib/*
           if [ -d "extracted/lib" ]; then
             cp -r extracted/lib/* app_project/lib/
           else
-            # اگر پوشه lib در ریشه نبود، عمیق‌ترین پوشه حاوی main.dart پیدا شود
             MAIN_FILE=$(find extracted -name "main.dart" | head -n 1)
             if [ -n "$MAIN_FILE" ]; then
               SRC_DIR=$(dirname "$MAIN_FILE")
@@ -49,21 +48,36 @@ jobs:
             fi
           fi
           
+          # تنظیم دقیق pubspec.yaml با تمام پکیج‌های پروژه
+          cat << 'EOF' > app_project/pubspec.yaml
+          name: zabanamoz_app
+          description: "A new Flutter project."
+          publish_to: 'none'
+          version: 1.0.0+1
+
+          environment:
+            sdk: '>=3.0.0 <4.0.0'
+
+          dependencies:
+            flutter:
+              sdk: flutter
+            flutter_localizations:
+              sdk: flutter
+            intl: any
+            provider: any
+            supabase_flutter: any
+            cupertino_icons: ^1.0.8
+
+          dev_dependencies:
+            flutter_test:
+              sdk: flutter
+            flutter_lints: ^3.0.0
+
+          flutter:
+            uses-material-design: true
+          EOF
+
           cd app_project
-          
-          # افزودن پکیج‌های پیش‌نیاز شناسایی‌شده در خطاها
-          flutter pub add provider supabase_flutter flutter_localizations --sdk=flutter intl
-          
-          # در صورت وجود pubspec اختصاصی در زیپ، سایر پکیج‌ها نیز استخراج و نصب شوند
-          PUBSPEC=$(find ../extracted -name "pubspec.yaml" | head -n 1)
-          if [ -n "$PUBSPEC" ]; then
-            awk '/dependencies:/{flag=1; next} /dev_dependencies:/{flag=0} flag' "$PUBSPEC" | grep -E '^  [a-zA-Z0-9_]+:' | awk -F: '{print $1}' | tr -d ' ' | while read -r pkg; do
-              if [ "$pkg" != "flutter" ] && [ "$pkg" != "cupertino_icons" ] && [ "$pkg" != "flutter_localizations" ]; then
-                flutter pub add "$pkg" || true
-              fi
-            done
-          fi
-          
           flutter pub get
           flutter build apk --release
           
